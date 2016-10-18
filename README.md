@@ -1,1 +1,1 @@
-# 101-prototype
+# demo prototype based on Arduino101
