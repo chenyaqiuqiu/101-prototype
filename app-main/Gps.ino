@@ -4,7 +4,6 @@
 static void printGpsDateTime(TinyGPSDate &d, TinyGPSTime &t);
 
 static const int RXPin = 4, TXPin = 3;
-static const uint32_t GPSBaud = 9600;
 
 static const double lastLat = 0;
 static const double lastLng = 0;
@@ -13,11 +12,13 @@ static const double lastLng = 0;
 TinyGPSPlus gps;
 
 // The serial connection to the GPS device
-SoftwareSerial ss(RXPin, TXPin);
 
-void gpsSetup()
+void gpsSetup(int RXpin, int TXPin, int gpsBaud)
 {
+  SoftwareSerial ss(RXPin, TXPin);
+  
   ss.begin(GPSBaud);
+  Serial.print(gpsBaud);
 }
 
 static void printInt(unsigned long val, bool valid, int len)

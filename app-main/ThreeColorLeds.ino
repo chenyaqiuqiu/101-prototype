@@ -35,3 +35,8 @@ void LedsShowBATStatus(int battaryStatus)
       setLedsRGB(0, 0, 0);
   }
 }
+
+void turnOffLeds(void)
+{
+  setLedsRGB(0, 0, 0);
+}

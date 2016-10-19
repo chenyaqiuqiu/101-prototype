@@ -14,5 +14,6 @@ enum _battaryStatus {
 void ledsSetup(void);
 void LedsShowBATStatus(int battaryStatus);
 void setLedsRGB(int red, int green, int blue);
+void turnOffLeds(void);
 
 #endif
