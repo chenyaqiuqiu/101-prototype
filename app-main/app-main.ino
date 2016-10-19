@@ -7,18 +7,19 @@
 #include "Accelerometer.h"
 #include "ThreeColorLeds.h"
 
-#define   0S  0
-#define   1S  10
-#define   2S  20
-#define   3S  30
-#define   6S  60
+#define   TIMER_0S    0
+#define   TIMER_1S    10
+#define   TIMER_2S    20
+#define   TIMER_3S    30
+#define   TIMER_6S    60
+
+#define   BAT_POWER_FULL              800
+#define   BAT_POWER_PREWARNNING       400
+#define   BAT_POWER_ALARM             200
 
 #define   BAT_CHARGING_REFVALUE_HIGH  500
-#define   BAT_POWER_FULL     800
-#define   BAT_POWER_PREWARNNING 400
-#define   BAT_POWER_ALARM       200
 
-#define   SAMPLE_BUTTON_REFVALUE_HIGH    980
+#define   SAMPLE_BUTTON_REFVALUE_HIGH   980
 #define   SAMPLE_BUTTON_REFVALUE_LOW    100
 
 enum _runningStatus {
@@ -83,8 +84,8 @@ int updateBattaryStatus(int refValue)
 {
   if (refValue > BAT_POWER_FULL) {
     batteryPowerStatus =  full;
-  } else if (refValue > BAT_POWER_PREWARNNING 
-              && refValue <= BAT_POWER_FULL) {
+  } else if (refValue > BAT_POWER_PREWARNNING
+             && refValue <= BAT_POWER_FULL) {
     batteryPowerStatus = preWarnning;
   } else {
     batteryPowerStatus = alarm;
@@ -108,49 +109,48 @@ void loop() {
   // battaryStatus = preWarnning;
   // A1Value = 1000;
 
-  if (A1Value > BAT_CHARGING_FLAG) {
+  if (A1Value > BAT_CHARGING_REFVALUE_HIGH) {
     // charging battary
     arduinoStatus = batteryCharging;
-    if (chargingCount == 0S) {
+    if (chargingTimer == TIMER_0S) {
       LedsShowBATStatus(batteryPowerStatus);
-    } else if (chargingCount == 3S) {
+    } else if (chargingTimer == TIMER_3S) {
       turnOffLeds();
-
       //Serial.print("turnOff all leds");
     }
 
-    if (chargingCount == 6S) {
-      chargingCount = 0;
+    if (chargingTimer == TIMER_6S) {
+      chargingTimer = 0;
     }
     else
-      chargingCount++;
+      chargingTimer++;
   } else {
     arduinoStatus = normal;
   }
 
   // dataSample checking
-  if (A3Value < SAMPLE_BUTTON_REFVALUE_LOW ) {
-    dataSampleSignalCount++;
-    if (dataSampleSignalCount >= 2S) {
-      dataSampleStart = 1;
+  if (A3Value < SAMPLE_BUTTON_REFVALUE_LOW) {
+    dataSampleSignalTimer++;
+    if (dataSampleSignalTimer >= TIMER_2S) {
+      dataSampleStart = true;
     }
   } else if (A3Value > SAMPLE_BUTTON_REFVALUE_HIGH) {
-    if (dataSampleStart == 1) {
-      dataSampleStart = 0;
-      dataSampleSignalCount = 0;
+    if (dataSampleStart == true) {
+      dataSampleStart = false;
+      dataSampleSignalTimer = 0;
     }
   }
   // data Sample
-  dataSampleStart = 1;
-  battaryStatus = preWarnning;
+  dataSampleStart = true;
+  batteryPowerStatus = preWarnning;
 
   if (dataSampleStart == 1) {
     arduinoStatus = dataSample;
     A0Value = analogRead(A0);
 
-    heartBeat[dataSampleCount++] = A0Value;
+    heartBeat[dataSampleTimer++] = A0Value;
 
-    if (dataSampleCount == 10) {
+    if (dataSampleTimer == 10) {
       // heartBeat
       for (i = 0; i < 10; i++) {
         heartBeatAvrSec += heartBeat[i];
@@ -167,7 +167,7 @@ void loop() {
 
       getGyroValue(&gZ, &gY, &gZ);
       getAccelrometerValue(&aclX, &aclY, &aclZ);
-      dataSampleCount = 0;
+      dataSampleTimer = 0;
       dataSampleLeds = !dataSampleLeds;
     }
 
@@ -177,7 +177,7 @@ void loop() {
     // Serial.print("\r\n");
 
     if (dataSampleLeds) {
-      LedsShowBATStatus(battaryStatus);
+      LedsShowBATStatus(battaryPowerStatus);
     } else {
       turnOffLeds();
     }
