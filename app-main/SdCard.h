@@ -5,8 +5,8 @@
 #ifndef SD_H
 #define SD_H
 
-void sdCardSetup(void);
+void sdCardSetup(int csPin);
 void sdWriteHeartBeat(long heartBeat);
-void sdWriteStepCount(long stepcount);
+void sdWriteAclAndGyro(float gx, float gy, float gz, float aclx, float acly, float aclz);
 
 #endif

@@ -6,6 +6,7 @@
 #include "Gyro.h"
 #include "Accelerometer.h"
 #include "ThreeColorLeds.h"
+#include "Gps.h"
 
 #define   TIMER_0S    0
 #define   TIMER_1S    10
@@ -22,12 +23,19 @@
 #define   SAMPLE_BUTTON_REFVALUE_HIGH   980
 #define   SAMPLE_BUTTON_REFVALUE_LOW    100
 
+#define   HEARTRATE_TIMES_PERSEC    10
+
 enum _runningStatus {
   normal = 0,
   batteryCharging,
   bleSendingData,
   dataSample
 };
+
+static const int debugBaud = 9600;
+static const int gpsBaud = 9600;
+
+static const int sdCardCsPin = 4;
 
 static bool sendDataToAppFlag = false;
 static int arduinoStatus = normal;
@@ -39,8 +47,9 @@ int A1Value = 0;
 int A2Value = 0;
 int A3Value = 0;
 
-int heartBeat[10];
+int heartBeat[HEARTRATE_TIMES_PERSEC];
 int heartBeatAvrSec;
+
 int temData = 0;
 int i;
 
@@ -51,15 +60,14 @@ int dataSampleTimer = 0;
 int dataSampleStart = 0;
 bool dataSampleLeds = 1;
 
+long stepsCounter;
+
 float aclX;
 float aclY;
 float aclZ;
-
 float gX;
 float gY;
 float gZ;
-
-long stepsCounter;
 
 void sendDataToApp(void)
 {
@@ -67,20 +75,23 @@ void sendDataToApp(void)
 
 void setup() {
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
+  Serial.begin(debugBaud);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
+  
   CurieIMU.begin();
-  sdCardSetup();
-  setupCurieStepCount();
+  
+  gpsSetup(gpsBaud);
+  sdCardSetup(sdCardCsPin);
+  CurieStepCountSetup();
   accelerometerSetup();
   gyroSetup();
   ledsSetup();
   Serial.print("Initializing is Done.");
 }
 
-int updateBattaryStatus(int refValue)
+static void updateBattaryStatus(int refValue)
 {
   if (refValue > BAT_POWER_FULL) {
     batteryPowerStatus =  full;
@@ -93,8 +104,10 @@ int updateBattaryStatus(int refValue)
 }
 
 void loop() {
+sdWriteAclAndGyro(1.1, 1.2, 1.3, 1.4, 1.6, 1.7);
+sdWriteAclAndGyro(2.1155, 2.2, 2.3, 2.4, 2.6, 2.7);
 
-  int batteryPowerStatus = 0;
+while(1);
 
   A1Value = analogRead(A1);
   A2Value = analogRead(A2);
@@ -120,7 +133,7 @@ void loop() {
     }
 
     if (chargingTimer == TIMER_6S) {
-      chargingTimer = 0;
+      chargingTimer = TIMER_0S;
     }
     else
       chargingTimer++;
@@ -150,23 +163,27 @@ void loop() {
 
     heartBeat[dataSampleTimer++] = A0Value;
 
-    if (dataSampleTimer == 10) {
+    if (dataSampleTimer == TIMER_1S) {
       // heartBeat
       for (i = 0; i < 10; i++) {
         heartBeatAvrSec += heartBeat[i];
         heartBeatAvrSec = heartBeatAvrSec / 10;
       }
 
-      // Serial.print("beartBeat:");
-      // Serial.print(heartBeatAvrSec);
-      // Serial.print("\r\n");
-
+      Serial.print("beartBeat:");
+      Serial.print(heartBeatAvrSec);
+      Serial.print("\r\n");
+      sdWriteHeartBeat(heartBeatAvrSec);
+      
       stepsCounter = getStepCounts();  //steps Count
       Serial.print("counter: ");
       Serial.println(stepsCounter);
-
-      getGyroValue(&gZ, &gY, &gZ);
+      sdWriteStepCount(stepsCounter);
+            
+      getGyroValue(&gX, &gY, &gZ);
       getAccelrometerValue(&aclX, &aclY, &aclZ);
+      sdWriteAclAndGyro(gX, gY, gZ, aclX, aclY, aclZ);
+
       dataSampleTimer = 0;
       dataSampleLeds = !dataSampleLeds;
     }
@@ -177,19 +194,19 @@ void loop() {
     // Serial.print("\r\n");
 
     if (dataSampleLeds) {
-      LedsShowBATStatus(battaryPowerStatus);
+      LedsShowBATStatus(batteryPowerStatus);
     } else {
       turnOffLeds();
     }
   }
-  /*
+  
     // BLE sending
-    if (arduinoStatus == standBy)
+    if (arduinoStatus == normal)
       if (sendDataToAppFlag) {
         // BLE is connected and send data to App by BLE
         arduinoStatus = bleSendingData;
       }
-  */
+
   delay(100);
 }
 

@@ -2,7 +2,7 @@
 #include "CurieIMU.h"
 static long lastStepCount = 0;              // step count on previous polling check
 
-void setupCurieStepCount() {
+void CurieStepCountSetup() {
   //CurieIMU.begin();
   // turn on step detection mode:
   CurieIMU.setStepDetectionMode(CURIE_IMU_STEP_MODE_NORMAL);

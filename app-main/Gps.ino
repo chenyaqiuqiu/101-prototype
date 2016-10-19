@@ -1,23 +1,22 @@
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 
-static void printGpsDateTime(TinyGPSDate &d, TinyGPSTime &t);
+static const int gpsRxPin = 4;
+static const int gpsTxPin = 3;
 
-static const int RXPin = 4, TXPin = 3;
+static void printGpsDateTime(TinyGPSDate &d, TinyGPSTime &t);
 
 static const double lastLat = 0;
 static const double lastLng = 0;
 
 // The TinyGPS++ object
 TinyGPSPlus gps;
-
+SoftwareSerial ss(gpsRxPin, gpsTxPin);
 // The serial connection to the GPS device
 
-void gpsSetup(int RXpin, int TXPin, int gpsBaud)
+void gpsSetup(int gpsBaud)
 {
-  SoftwareSerial ss(RXPin, TXPin);
-  
-  ss.begin(GPSBaud);
+  ss.begin(gpsBaud);
   Serial.print(gpsBaud);
 }
 

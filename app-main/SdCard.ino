@@ -8,9 +8,9 @@ const char *stepCoutFile = "SC.txt";
 const char *aclAndGyroFile = "AG.txt";
 const char *gpsFile = "gps.txt";
 
-void sdCardSetup(void)
+void sdCardSetup(int csPin)
 {
-  if (!SD.begin(4)) {
+  if (!SD.begin(csPin)) {
     Serial.println("initialization failed!");
   }
 }
@@ -37,18 +37,31 @@ void sdWriteStepCount(long stepcount)
   // close the file:
   myFile.close();
   myFile.flush();
+
+  
   Serial.println("Write StepCout done.");
 }
 
-void writeAclAndGyro(int heartBeat)
+void sdWriteAclAndGyro(float gx, float gy, float gz, float aclx, float acly, float aclz)
 {
   myFile = SD.open(aclAndGyroFile, FILE_WRITE);
-  myFile.print(heartBeat);
+  myFile.print("//");
+  myFile.print(gx);
+  myFile.print("//");
+  myFile.print(gy);
+  myFile.print("//");
+  myFile.print(gz);
+  myFile.print("//");
+  myFile.print(aclx);
+  myFile.print("//");
+  myFile.print(acly);
+  myFile.print("//");
+  myFile.print(aclz);
   myFile.print("\r\n");
   // close the file:
   myFile.close();
   myFile.flush();
-  Serial.println("Write HeartBeat done.");
+  Serial.println("Write Acl And Gyro done.");
 }
 
 void SdFileRemove(const char *file)
