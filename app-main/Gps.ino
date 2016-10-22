@@ -20,6 +20,7 @@ void gpsSetup(int gpsBaud)
   Serial.print(gpsBaud);
 }
 
+
 static void printInt(unsigned long val, bool valid, int len)
 {
   char sz[32] = "*****************";
