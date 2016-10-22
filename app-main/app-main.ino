@@ -39,7 +39,7 @@ enum _runningStatus {
 static const int debugBaud = 9600;
 static const int gpsBaud = 9600;
 
-static const int sdCardCsPin = 4;
+static const int sdCardCsPin = 2;
 
 static bool sendDataToAppFlag = false;
 static int arduinoStatus = normal;
@@ -72,6 +72,13 @@ float gX;
 float gY;
 float gZ;
 
+int year_lastMs;
+int month_lastMs;
+int day_lastMs;
+int hour_lastMs;
+int minute_lastMs;
+int second_lastMs;
+
 void sendDataToApp(void)
 {
   // add you code here to send data to APP
@@ -84,6 +91,38 @@ static void calculateHeartRate(void)
     heartRateAvrSec += heartRate[i];
     heartRateAvrSec = heartRateAvrSec / 10;
   }
+}
+
+/*
+void getGpsDistance(unsigned long *distance);
+int getGpsSpeed(float *speed);
+int getGpsAltitude(float *altitudeMeters);
+int getGpsTime(int *year, int *month, int *day, int *hour, int *minute, int *second);
+*/
+
+void getAndWriteGpsData(void)
+{
+  int distance;
+  float gpsSpeed;
+  int alMeters; 
+  int cur_year, cur_month, cur_day, cur_hour, cur_minute, cur_second;
+
+  getGpsDistance(&distance);
+  getGpsSpeed(&gpsSpeed);
+  getGpsAltitude(&alMeters);
+  getGpsTime(&cur_year, &cur_month, &cur_day, &cur_hour, &cur_minute, &cur_second);
+
+  year_lastMs = cur_year;
+  month_lastMs = cur_month;
+  day_lastMs = cur_day;
+  hour_lastMs = cur_hour;
+  minute_lastMs = cur_minute;
+  second_lastMs = cur_second;
+  
+  sdWriteDistance(distance);
+  sdWriteSpeed(gpsSpeed);
+  sdWriteAltitude(alMeters);
+  //sdWriteDate();
 }
 
 static void updateBatteryStatus(void)
@@ -121,23 +160,8 @@ void setup() {
     Serial.print("Initializing is Done.");
 }
 
-static void printIntT(unsigned long val, int len)
-{
-  char sz[32] = {0};
-  
-  sprintf(sz, "%ld", val);
-  sz[len] = 0;
-  for (int i = strlen(sz); i < len; ++i)
-    sz[i] = ' ';
-  if (len > 0)
-    sz[len - 1] = ' ';
-  Serial.print(sz);
-  smartDelay(0);
-}
-
 void loop() {
-    printIntT(10, 5);
-    while(1);
+
     // update Battery every 0.1s
     updateBatteryStatus();
 
@@ -196,7 +220,7 @@ void loop() {
     dataSampleStart = true;
     batteryPowerStatus = preWarnning;
 
-   if (dataSampleStart == true) {
+    if (dataSampleStart == true) {
       arduinoStatus = dataSample;
       heartRate[dataSampleTimer++] = analogRead(A0);
 
@@ -215,7 +239,8 @@ void loop() {
         getGyroValue(&gX, &gY, &gZ);
         getAccelrometerValue(&aclX, &aclY, &aclZ);
         sdWriteAclAndGyro(gX, gY, gZ, aclX, aclY, aclZ);
-
+        getAndWriteGpsData();
+        
         dataSampleTimer = 0;
         dataSampleLeds = !dataSampleLeds;
       }

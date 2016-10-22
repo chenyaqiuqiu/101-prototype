@@ -1,7 +1,7 @@
 #ifndef THREE_COLOR_LED_H
 #define THREE_COLOR_LED_H
 
-#define RED_LED     3
+#define RED_LED     9
 #define GREEN_LED   5
 #define BLUE_LED    6
 
