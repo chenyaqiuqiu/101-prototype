@@ -1,6 +1,14 @@
 
 #include <CurieIMU.h>
 
+#define ACL_DEBUG 1
+
+#ifdef ACL_DEBUG
+#define AclDebug(x) Serial.println(x) 
+#else
+#define AclDebug(x) {}
+#endif
+
 void accelerometerSetup() {
   // Set the accelerometer range to 2G
   CurieIMU.setAccelerometerRange(2);
@@ -18,13 +26,13 @@ void getAccelrometerValue(float *ax, float *ay, float *az) {
   *az = convertRawAcceleration(azRaw);
 
   // display tab-separated accelerometer x/y/z values
-  Serial.print("a:\t");
-  Serial.print(*ax);
-  Serial.print("\t");
-  Serial.print(*ay);
-  Serial.print("\t");
-  Serial.print(*az);
-  Serial.println();
+  AclDebug("a:\t");
+  AclDebug(*ax);
+  AclDebug("\t");
+  AclDebug(*ay);
+  AclDebug("\t");
+  AclDebug(*az);
+  AclDebug();
 }
 
 float convertRawAcceleration(int aRaw) {

@@ -1,6 +1,14 @@
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 
+#define GPS_DEBUG 1
+
+#ifdef GPS_DEBUG
+#define GpsDebug(x) Serial.println(x) 
+#else
+#define GpsDebug(x) {}
+#endif
+
 static const int gpsRxPin = 4;
 static const int gpsTxPin = 3;
 
@@ -15,7 +23,8 @@ SoftwareSerial ss(gpsRxPin, gpsTxPin);
 void gpsSetup(int gpsBaud)
 {
   ss.begin(gpsBaud);
-  Serial.print(gpsBaud);
+  GpsDebug("GPS Serial Band: ");
+  GpsDebug(gpsBaud);
 }
 
 int getGpshdopAndsateNum(int *satellitesNum, int *hdop)

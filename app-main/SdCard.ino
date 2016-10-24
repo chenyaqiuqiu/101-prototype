@@ -1,6 +1,14 @@
 #include <SPI.h>
 #include <SD.h>
 
+#define SD_DEBUG 1
+
+#ifdef SD_DEBUG
+#define SdDebug(x) Serial.println(x) 
+#else
+#define SdDebug(x) {}
+#endif
+
 File myFile;
 // file name length is limitted
 const char *heartBeatFile = "HB.txt";
@@ -16,7 +24,7 @@ const char *dateFile = "date.txt";
 void sdCardSetup(int csPin)
 {
   if (!SD.begin(csPin)) {
-    Serial.println("initialization failed!");
+    SdDebug("SD card init failed!\r\n");
   }
 }
 
@@ -32,7 +40,7 @@ void sdWriteHeartBeat(int val)
   // close the file:
   myFile.close();
   myFile.flush();
-  Serial.println("Write HeartBeat done.");
+  SdDebug("Write HeartBeat done.");
 }
 
 void sdWriteStepCount(long stepcount)
@@ -47,7 +55,7 @@ void sdWriteStepCount(long stepcount)
   myFile.close();
   myFile.flush();
   
-  Serial.println("Write StepCout done.");
+  SdDebug("Write StepCout done.");
 }
 
 void sdWriteAclAndGyro(float gx, float gy, float gz, float aclx, float acly, float aclz)
@@ -78,7 +86,7 @@ void sdWriteAclAndGyro(float gx, float gy, float gz, float aclx, float acly, flo
   // close the file:
   myFile.close();
   myFile.flush();
-  Serial.println("Write Acl And Gyro done.");
+  SdDebug("Write Acl And Gyro done.");
 }
 
 void  sdWriteDistance(int distance)
@@ -93,7 +101,7 @@ void  sdWriteDistance(int distance)
   myFile.close();
   myFile.flush();
   
-  Serial.println("Write Distance done.");  
+  SdDebug("Write Distance done.");  
 }
 
 void sdWriteSpeed(float speedKm)
@@ -107,7 +115,7 @@ void sdWriteSpeed(float speedKm)
   myFile.close();
   myFile.flush();
 
-  Serial.println("Write Speed done.");  
+  SdDebug("Write Speed done.");  
 }
 
 void  sdWriteAltitude(int alMeters)

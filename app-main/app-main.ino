@@ -8,12 +8,22 @@
 #include "ThreeColorLeds.h"
 #include "Gps.h"
 
+#define APP_DEBUG 1
+
+#ifdef APP_DEBUG
+#define AppDebug(x) Serial.println(x)
+#else
+#define AppDebug(x) {}
+#endif
+
+// 100ms
+#define   LOOP_INTERVAL   100
 #define   TIMER_0S    0
-#define   TIMER_1S    10
-#define   TIMER_1_5S  15
-#define   TIMER_2S    20
-#define   TIMER_3S    30
-#define   TIMER_6S    60
+#define   TIMER_1S    (1000 / LOOP_INTERVAL)
+#define   TIMER_1_5S  (1500 / LOOP_INTERVAL)
+#define   TIMER_2S    (2000 / LOOP_INTERVAL)
+#define   TIMER_3S    (3000 / LOOP_INTERVAL)
+#define   TIMER_6S    (6000 / LOOP_INTERVAL)
 
 // BAT 4.2V is full 800 = 860
 #define   BAT_POWER_FULL              820
@@ -22,33 +32,27 @@
 #define   BAT_POWER_ALARM             200
 
 // check BAT is checking ??
-#define   BAT_CHARGING_REFVALUE_HIGH  500
+#define   BAT_CHARGING_REFVALUE_HIGH        500
 
 #define   SAMPLE_BUTTON_PUSHED_VOLTAGE      980
 #define   SAMPLE_BUTTON_RELEASED_VOLTAGE    100
 
 #define   HEARTRATE_TIMES_PERSEC    10
 
-enum _runningStatus {
-  normal = 0,
-  batteryCharging,
-  bleSendingData,
-  dataSample
-};
-
 static const int debugBaud = 9600;
 static const int gpsBaud = 9600;
-
 static const int sdCardCsPin = 2;
 
 static bool sendDataToAppFlag = false;
-static int arduinoStatus = normal;
+
+static bool BATCharging = false;
+static bool DataSampling = false;
+static bool BLESending = false;
 
 int temData = 0;
 int i;
 
 int A3Value;
-int A1Value;
 
 int batteryPowerStatus;
 int sampleButtonVoltage;
@@ -59,9 +63,11 @@ int heartRateAvrSec;
 int chargingTimer = 0;
 int sampleButtonPushedTimer = 0;
 int dataSampleTimer = 0;
+int BLESendingDataTimer = 0;
 
 int dataSampleStart = 0;
-bool dataSampleLeds = 1;
+bool dataSampleLeds = true;
+int bleBlinkLed = 0;
 
 long stepsCounter;
 
@@ -89,22 +95,15 @@ static void calculateHeartRate(void)
   // heartBeat
   for (i = 0; i < HEARTRATE_TIMES_PERSEC; i++) {
     heartRateAvrSec += heartRate[i];
-    heartRateAvrSec = heartRateAvrSec / 10;
+    heartRateAvrSec = heartRateAvrSec / HEARTRATE_TIMES_PERSEC;
   }
 }
-
-/*
-void getGpsDistance(unsigned long *distance);
-int getGpsSpeed(float *speed);
-int getGpsAltitude(float *altitudeMeters);
-int getGpsTime(int *year, int *month, int *day, int *hour, int *minute, int *second);
-*/
 
 void getAndWriteGpsData(void)
 {
   int distance;
   float gpsSpeed;
-  int alMeters; 
+  int alMeters;
   int cur_year, cur_month, cur_day, cur_hour, cur_minute, cur_second;
 
   getGpsDistance(&distance);
@@ -118,7 +117,7 @@ void getAndWriteGpsData(void)
   hour_lastMs = cur_hour;
   minute_lastMs = cur_minute;
   second_lastMs = cur_second;
-  
+
   sdWriteDistance(distance);
   sdWriteSpeed(gpsSpeed);
   sdWriteAltitude(alMeters);
@@ -127,145 +126,149 @@ void getAndWriteGpsData(void)
 
 static void updateBatteryStatus(void)
 {
-    int A1_BatteryVoltage = 0;
+  int A1_BatteryVoltage = 0;
 
-    // get Battery Voltage by A1 Pin
-    A1_BatteryVoltage = analogRead(A1);
+  // get Battery Voltage by A1 Pin
+  A1_BatteryVoltage = analogRead(A1);
 
-    if (A1_BatteryVoltage > BAT_POWER_FULL) {
-      batteryPowerStatus =  full;
-    } else if (A1_BatteryVoltage > BAT_POWER_PREWARNNING
-               && A1_BatteryVoltage <= BAT_POWER_FULL) {
-      batteryPowerStatus = preWarnning;
-    } else {
-      batteryPowerStatus = alarm;
-    }
+  if (A1_BatteryVoltage > BAT_POWER_FULL) {
+    batteryPowerStatus =  full;
+  } else if (A1_BatteryVoltage > BAT_POWER_PREWARNNING
+             && A1_BatteryVoltage <= BAT_POWER_FULL) {
+    batteryPowerStatus = preWarnning;
+  } else {
+    batteryPowerStatus = alarm;
+  }
 }
 
 void setup() {
-    // Open serial communications and wait for port to open:
-    Serial.begin(debugBaud);
-    while (!Serial) {
-      ; // wait for serial port to connect. Needed for native USB port only
-    }
+  // Open serial communications and wait for port to open:
+  Serial.begin(debugBaud);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
 
-    CurieIMU.begin();
+  CurieIMU.begin();
 
-    gpsSetup(gpsBaud);
-    sdCardSetup(sdCardCsPin);
-    CurieStepCountSetup();
-    accelerometerSetup();
-    gyroSetup();
-    ledsSetup();
-    Serial.print("Initializing is Done.");
+  gpsSetup(gpsBaud);
+  sdCardSetup(sdCardCsPin);
+  CurieStepCountSetup();
+  accelerometerSetup();
+  gyroSetup();
+  ledsSetup();
+  AppDebug("Initializing is Done.");
 }
 
 void loop() {
 
-    // update Battery every 0.1s
-    updateBatteryStatus();
+  // update Battery every 0.1s
+  updateBatteryStatus();
+  batteryPowerStatus =  full;
 
-    if (arduinoStatus == normal) {
+  A3Value = analogRead(A3);
+  A3Value = BAT_CHARGING_REFVALUE_HIGH - 1;
+
+  if (A3Value > BAT_CHARGING_REFVALUE_HIGH) {
+    BATCharging = true;
+    if (chargingTimer == TIMER_0S) {
+      Serial.print("show charging status\r\n");
       LedsShowBATStatus(batteryPowerStatus);
+    } else if (chargingTimer == TIMER_3S) {
+      turnOffLeds();
+      Serial.print("turnOff all leds\r\n");
     }
 
-    // battaryStatus = preWarnning;
-    // A1Value = 1000;
-    // charging battary
-    A3Value = analogRead(A3);
-    if (A3Value > BAT_CHARGING_REFVALUE_HIGH) {
-      // update arduino status to battery is charging
-      arduinoStatus = batteryCharging;
+    if (chargingTimer == TIMER_6S) {
+      chargingTimer = TIMER_0S;
+    }
+    else
+      chargingTimer++;
+  } else {
+    BATCharging = false;
+  }
 
-      if (chargingTimer == TIMER_0S) {
-        LedsShowBATStatus(batteryPowerStatus);
-      } else if (chargingTimer == TIMER_3S) {
-        turnOffLeds();
-        //Serial.print("turnOff all leds");
-      }
+  // dataSample Button checking
+  sampleButtonVoltage = analogRead(A2);
 
-      if (chargingTimer == TIMER_6S) {
-        chargingTimer = TIMER_0S;
+  if (sampleButtonVoltage > SAMPLE_BUTTON_PUSHED_VOLTAGE) {
+    sampleButtonPushedTimer++;
+
+    if (sampleButtonPushedTimer >= TIMER_1_5S) {
+      if (dataSampleStart == true) {
+        dataSampleStart = false;
+        sampleButtonPushedTimer = 0;
       }
-      else
-        chargingTimer++;
-    } else {
-      arduinoStatus = normal;
     }
 
-    // dataSample Button checking
-    sampleButtonVoltage = analogRead(A2);
-
-    if (sampleButtonVoltage > SAMPLE_BUTTON_PUSHED_VOLTAGE) {
-      sampleButtonPushedTimer++;
-
-      if (sampleButtonPushedTimer >= TIMER_1_5S) {
-        if (dataSampleStart == true) {
-          dataSampleStart = false;
-          sampleButtonPushedTimer = 0;
-        }
-      }
-
-      if (sampleButtonPushedTimer >= TIMER_2S) {
-        dataSampleStart = true;
-      }
-
-    } else {
-      dataSampleStart = false;
-      sampleButtonPushedTimer = 0;
+    if (sampleButtonPushedTimer >= TIMER_2S) {
+      dataSampleStart = true;
     }
 
+  } else {
+    dataSampleStart = false;
+    sampleButtonPushedTimer = 0;
+  }
 
-    // data Sample
-    dataSampleStart = true;
-    batteryPowerStatus = preWarnning;
 
-    if (dataSampleStart == true) {
-      arduinoStatus = dataSample;
-      heartRate[dataSampleTimer++] = analogRead(A0);
+  // data Sample
+  dataSampleStart = true;
 
-      if (dataSampleTimer == TIMER_1S) {
-        calculateHeartRate();
-        Serial.print("beartRate:");
-        Serial.print(heartRateAvrSec);
-        Serial.print("\r\n");
-        sdWriteHeartBeat(heartRateAvrSec);
+  if (dataSampleStart == true) {
+    DataSampling = true;
+    heartRate[dataSampleTimer++] = analogRead(A0);
 
-        stepsCounter = getStepCounts();  //steps Count
-        Serial.print("counter: ");
-        Serial.println(stepsCounter);
-        sdWriteStepCount(stepsCounter);
+    if (dataSampleTimer == TIMER_1S) {
+      calculateHeartRate();
+      AppDebug("beartRate:");
+      AppDebug(heartRateAvrSec);
+      AppDebug("\r\n");
+      sdWriteHeartBeat(heartRateAvrSec);
 
-        getGyroValue(&gX, &gY, &gZ);
-        getAccelrometerValue(&aclX, &aclY, &aclZ);
-        sdWriteAclAndGyro(gX, gY, gZ, aclX, aclY, aclZ);
-        getAndWriteGpsData();
-        
-        dataSampleTimer = 0;
-        dataSampleLeds = !dataSampleLeds;
-      }
+      stepsCounter = getStepCounts();  //steps Count
+      AppDebug("counter: ");
+      AppDebug(stepsCounter);
+      sdWriteStepCount(stepsCounter);
+
+      getGyroValue(&gX, &gY, &gZ);
+      getAccelrometerValue(&aclX, &aclY, &aclZ);
+      sdWriteAclAndGyro(gX, gY, gZ, aclX, aclY, aclZ);
+      //getAndWriteGpsData();
+
+      dataSampleTimer = 0;
+      dataSampleLeds = !dataSampleLeds;
+    }
 
     // Serial.print(dataSampleCount);
     // Serial.print("\r\n");
     //Serial.print(dataSampleLeds);
     // Serial.print("\r\n");
 
-      if (dataSampleLeds) {
-        LedsShowBATStatus(batteryPowerStatus);
-      } else {
-        turnOffLeds();
-      }
+    if (dataSampleLeds) {
+      LedsShowBATStatus(batteryPowerStatus);
+    } else {
+      turnOffLeds();
+    }
   } else {
-    arduinoStatus = normal;
+    DataSampling = false;
   }
 
   // BLE sending
-  if (arduinoStatus == normal) {
-    if (sendDataToAppFlag) {
-      // BLE is connected and send data to App by BLE
-      arduinoStatus = bleSendingData;
+  if (sendDataToAppFlag) {
+    // BLE is connected and send data to App by BLE
+    BLESending = true;
+    if (BLESendingDataTimer == TIMER_1S) {
+      // timer to do this
+       //BLEBinkLed = 1;
+       //BLESendingDataTimer = TIMER_0S;
     }
+  } else {
+    BLESending = false;
   }
-  delay(100);
+
+  if (!(BATCharging || DataSampling || BLESending)) {
+    LedsShowBATStatus(batteryPowerStatus);
+  }
+
+  delay(LOOP_INTERVAL);
 }
 

@@ -1,9 +1,18 @@
 #include "CurieIMU.h"
 
+#define GYRO_DEBUG 1
+
+#ifdef GYRO_DEBUG
+#define GyroDebug(x) Serial.println(x) 
+#else
+#define GyroDebug(x) {}
+#endif
+
+
 void gyroSetup() {
-  Serial.print("Starting Gyroscope calibration...");
+  GyroDebug("Starting Gyroscope calibration...");
   CurieIMU.autoCalibrateGyroOffset();
-  Serial.println("Gyro Done");
+  GyroDebug("Gyro Done");
   // Set the accelerometer range to 250 degrees/second
   CurieIMU.setGyroRange(250);
 }
@@ -19,12 +28,12 @@ void getGyroValue(float *gx, float *gy, float *gz) {
   *gz = convertRawGyro(gzRaw);
 
   // display tab-separated gyro x/y/z values
-  Serial.print("g:\t");
-  Serial.print(*gx);
-  Serial.print("\t");
-  Serial.print(*gy);
-  Serial.print("\t");
-  Serial.print(*gz);
+  GyroDebug("g:\t");
+  GyroDebug(*gx);
+  GyroDebug("\t");
+  GyroDebug(*gy);
+  GyroDebug("\t");
+  GyroDebug(*gz);
   Serial.println();
 }
 

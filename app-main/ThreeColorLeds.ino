@@ -9,6 +9,8 @@ void ledsSetup(void)
   pinMode(RED_LED, OUTPUT);
   pinMode(GREEN_LED, OUTPUT);
   pinMode(BLUE_LED, OUTPUT);
+  
+  turnOffLeds();
 }
 
 void setLedsRGB(int red, int green, int blue)
@@ -23,6 +25,7 @@ void LedsShowBATStatus(int battaryStatus)
   switch (battaryStatus) {
     case full:
       setLedsRGB(0, 255, 0);
+      
       break;
     case preWarnning:
       setLedsRGB(0, 0, 255);

@@ -1,5 +1,14 @@
 
 #include "CurieIMU.h"
+
+#define STEP_DEBUG 1
+
+#ifdef STEP_DEBUG
+#define StepsDebug(x) Serial.println(x) 
+#else
+#define StepsDebug(x) {}
+#endif
+
 static long lastStepCount = 0;              // step count on previous polling check
 
 void CurieStepCountSetup() {
@@ -12,7 +21,7 @@ void CurieStepCountSetup() {
   // step event handler:
   CurieIMU.attachInterrupt(eventCallback);
   CurieIMU.interrupts(CURIE_IMU_STEP);  // turn on step detection
-  Serial.println("IMU initialisation complete, waiting for events...");
+  StepsDebug("IMU initialisation complete, waiting for events...");
 }
 
 long getStepCounts() {
