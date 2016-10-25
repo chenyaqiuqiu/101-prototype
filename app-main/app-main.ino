@@ -176,9 +176,9 @@ void loop() {
   //sdReadLine();
   // update Battery every 0.1s
   updateBatteryStatus();
-  batteryPowerStatus =  full;
+  //batteryPowerStatus =  full;
   A3Value = analogRead(A3);
-  A3Value = BAT_CHARGING_REFVALUE_HIGH - 1;
+  //A3Value = BAT_CHARGING_REFVALUE_HIGH - 1;
 
   if (A3Value > BAT_CHARGING_REFVALUE_HIGH) {
     BATCharging = true;
@@ -218,7 +218,8 @@ void loop() {
     sampleButtonPushedTimer = 0;
   }
   // Debug Propose
-  dataSampleStart = true;
+  //dataSampleStart = true;
+  
   if (dataSampleStart == true) {
     DataSampling = true;
     heartRate[dataSampleTimer++] = analogRead(A0);
