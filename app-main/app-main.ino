@@ -1,11 +1,11 @@
 #include <BMI160.h>
 #include <CurieIMU.h>
-
 #include "SdCard.h"
 #include "StepCount.h"
 #include "Gyro.h"
 #include "Accelerometer.h"
 #include "ThreeColorLeds.h"
+#include "CurieTimerOne.h"
 #include "Gps.h"
 
 #define APP_DEBUG 1
@@ -30,7 +30,6 @@
 // BAT 3.8V is preWarnning
 #define   BAT_POWER_PREWARNNING       780
 #define   BAT_POWER_ALARM             200
-
 // check BAT is checking ??
 #define   BAT_CHARGING_REFVALUE_HIGH        500
 
@@ -38,13 +37,13 @@
 #define   SAMPLE_BUTTON_RELEASED_VOLTAGE    100
 
 #define   HEARTRATE_TIMES_PERSEC    10
+#define   BLE_LEDS_INTERVAL_TIMERS    100000
 
 static const int debugBaud = 9600;
 static const int gpsBaud = 9600;
 static const int sdCardCsPin = 2;
 
 static bool sendDataToAppFlag = false;
-
 static bool BATCharging = false;
 static bool DataSampling = false;
 static bool BLESending = false;
@@ -63,11 +62,10 @@ int heartRateAvrSec;
 int chargingTimer = 0;
 int sampleButtonPushedTimer = 0;
 int dataSampleTimer = 0;
-int BLESendingDataTimer = 0;
 
 int dataSampleStart = 0;
 bool dataSampleLeds = true;
-int bleBlinkLed = 0;
+int bleCounterIndex = 0;
 
 long stepsCounter;
 
@@ -87,7 +85,22 @@ int second_lastMs;
 
 void sendDataToApp(void)
 {
+  // read SD data from SD card and Send to App
+  sdReadheartRateFile();
+  
   // add you code here to send data to APP
+}
+
+void timedBlinkIsr()   // callback function when interrupt is asserted
+{
+  if (bleCounterIndex == 0 | bleCounterIndex == 3) {
+    LedsShowBATStatus(batteryPowerStatus);
+  } else {
+    turnOffLeds();  
+  }
+  bleCounterIndex++;
+  if (bleCounterIndex == 10)
+    bleCounterIndex = 0;
 }
 
 static void calculateHeartRate(void)
@@ -160,11 +173,10 @@ void setup() {
 }
 
 void loop() {
-
+  //sdReadLine();
   // update Battery every 0.1s
   updateBatteryStatus();
   batteryPowerStatus =  full;
-
   A3Value = analogRead(A3);
   A3Value = BAT_CHARGING_REFVALUE_HIGH - 1;
 
@@ -189,30 +201,24 @@ void loop() {
 
   // dataSample Button checking
   sampleButtonVoltage = analogRead(A2);
-
   if (sampleButtonVoltage > SAMPLE_BUTTON_PUSHED_VOLTAGE) {
     sampleButtonPushedTimer++;
-
     if (sampleButtonPushedTimer >= TIMER_1_5S) {
       if (dataSampleStart == true) {
         dataSampleStart = false;
         sampleButtonPushedTimer = 0;
       }
     }
-
+ 
     if (sampleButtonPushedTimer >= TIMER_2S) {
       dataSampleStart = true;
     }
-
   } else {
     dataSampleStart = false;
     sampleButtonPushedTimer = 0;
   }
-
-
-  // data Sample
+  // Debug Propose
   dataSampleStart = true;
-
   if (dataSampleStart == true) {
     DataSampling = true;
     heartRate[dataSampleTimer++] = analogRead(A0);
@@ -222,7 +228,7 @@ void loop() {
       AppDebug("beartRate:");
       AppDebug(heartRateAvrSec);
       AppDebug("\r\n");
-      sdWriteHeartBeat(heartRateAvrSec);
+      sdWriteHeartRate(heartRateAvrSec);
 
       stepsCounter = getStepCounts();  //steps Count
       AppDebug("counter: ");
@@ -237,12 +243,7 @@ void loop() {
       dataSampleTimer = 0;
       dataSampleLeds = !dataSampleLeds;
     }
-
-    // Serial.print(dataSampleCount);
-    // Serial.print("\r\n");
-    //Serial.print(dataSampleLeds);
-    // Serial.print("\r\n");
-
+    
     if (dataSampleLeds) {
       LedsShowBATStatus(batteryPowerStatus);
     } else {
@@ -252,16 +253,15 @@ void loop() {
     DataSampling = false;
   }
 
+// open the below comments to debug BLE
+//sendDataToAppFlag = false;
   // BLE sending
   if (sendDataToAppFlag) {
     // BLE is connected and send data to App by BLE
     BLESending = true;
-    if (BLESendingDataTimer == TIMER_1S) {
-      // timer to do this
-       //BLEBinkLed = 1;
-       //BLESendingDataTimer = TIMER_0S;
-    }
+    CurieTimerOne.start(BLE_LEDS_INTERVAL_TIMERS, &timedBlinkIsr);  // set timer and callback
   } else {
+    CurieTimerOne.stop();
     BLESending = false;
   }
 
