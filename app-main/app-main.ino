@@ -141,7 +141,6 @@ void getAndWriteGpsData(void)
   sdWriteDistance(distance);
   sdWriteSpeed(gpsSpeed);
   sdWriteAltitude(alMeters);
-  while(1);
   //sdWriteDate();
 }
 
@@ -178,6 +177,8 @@ void setup() {
 void loop() {
   // update Battery Voltage every 0.1s
   // get Battery Voltage by A1 Pin
+  sdReadheartRateFile();
+  while(1);
   
   currentBATVoltage = analogRead(A1);
   updateBatteryStatus(currentBATVoltage);
