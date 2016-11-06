@@ -28,11 +28,9 @@ void getGyroValue(float *gx, float *gy, float *gz) {
   *gz = convertRawGyro(gzRaw);
 
   // display tab-separated gyro x/y/z values
-  GyroDebug("g:\t");
+  GyroDebug("g:");
   GyroDebug(*gx);
-  GyroDebug("\t");
   GyroDebug(*gy);
-  GyroDebug("\t");
   GyroDebug(*gz);
   Serial.println();
 }

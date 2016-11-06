@@ -26,13 +26,10 @@ void getAccelrometerValue(float *ax, float *ay, float *az) {
   *az = convertRawAcceleration(azRaw);
 
   // display tab-separated accelerometer x/y/z values
-  AclDebug("a:\t");
+  AclDebug("a:");
   AclDebug(*ax);
-  AclDebug("\t");
   AclDebug(*ay);
-  AclDebug("\t");
   AclDebug(*az);
-  AclDebug();
 }
 
 float convertRawAcceleration(int aRaw) {

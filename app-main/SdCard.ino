@@ -91,10 +91,13 @@ void sdWriteAclAndGyro(float gx, float gy, float gz, float aclx, float acly, flo
 
 void  sdWriteDistance(int distance)
 {
-  char result[4] = {0};
-  sprintf(result, "%04d", distance);
+  int i;
+  char result[5] = {0};
+
+  sprintf(result, "%05d", distance);
   myFile = SD.open(distanceFile, FILE_WRITE);
   myFile.seek(0);
+
   myFile.print(result);
   myFile.print("\r\n");
   // close the file:
@@ -106,11 +109,15 @@ void  sdWriteDistance(int distance)
 
 void sdWriteSpeed(float speedKm)
 {
+  int i;
   char speedValue[4] = {0};
+ 
   sprintf(speedValue, "%04.1f", speedKm);
-
   myFile = SD.open(speedFile, FILE_WRITE);
-  myFile.print(speedValue);
+  for (i = 0; i < 4; i++) {
+    myFile.print(speedValue[i]);
+  }
+  myFile.print("\r\n");
   // close the file:
   myFile.close();
   myFile.flush();
@@ -118,12 +125,18 @@ void sdWriteSpeed(float speedKm)
   SdDebug("Write Speed done.");
 }
 
-void  sdWriteAltitude(int alMeters)
+void  sdWriteAltitude(float alMeters)
 {
+  int i;
   char result[4] = {0};
-  sprintf(result, "%04d", alMeters);
+
+  sprintf(result, "%04d", (int)alMeters);
   myFile = SD.open(AltitudeFile, FILE_WRITE);
-  myFile.print(result);
+
+  for (i = 0; i < 4; i++) {
+    myFile.print(result[i]);
+  }
+
   myFile.print("\r\n");
   // close the file:
   myFile.close();
@@ -155,12 +168,12 @@ void sdReadheartRateFile(void)
   char oneLine[12] = {0};
   int ret;
   myFile = SD.open(heartRateFile, FILE_READ);
-  
-  while((ret = sdReadLine(oneLine)) > 0) {
-      Serial.print(oneLine);
-      memset(oneLine, 0, 12);
+
+  while ((ret = sdReadLine(oneLine)) > 0) {
+    Serial.print(oneLine);
+    memset(oneLine, 0, 12);
   }
-  
+
   myFile.close();
 }
 
