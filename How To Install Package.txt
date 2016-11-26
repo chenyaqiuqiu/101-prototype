@@ -1,0 +1,12 @@
+packages 里面包含三个库文件：
+
+SdFat:  sd卡操作（暂时不需要）
+TinyGPS-13:   GPS操作需要
+
+安装： 
+
+将文件夹复制到ArduinoIDE 安装目录即可， 如我的目录为：
+
+C:\Users\TOSHIBA\Documents\Arduino\libraries\
+
+

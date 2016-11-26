@@ -177,8 +177,8 @@ void setup() {
 void loop() {
   // update Battery Voltage every 0.1s
   // get Battery Voltage by A1 Pin
-  sdReadheartRateFile();
-  while(1);
+  //sdReadheartRateFile();
+  //while(1);
   
   currentBATVoltage = analogRead(A1);
   updateBatteryStatus(currentBATVoltage);
@@ -268,7 +268,7 @@ void loop() {
     BLESending = true;
     CurieTimerOne.start(BLE_LEDS_INTERVAL_TIMERS, &timedBlinkIsr);  // set timer and callback
   } else {
-    CurieTimerOne.stop();
+    //CurieTimerOne.stop();
     BLESending = false;
   }
 
