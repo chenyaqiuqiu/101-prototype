@@ -1,6 +1,8 @@
 #include <SPI.h>
 #include <SD.h>
 
+#include "sdCard.h"
+
 #define SD_DEBUG 1
 
 #ifdef SD_DEBUG
@@ -10,16 +12,6 @@
 #endif
 
 File myFile;
-// file name length is limitted
-const char *heartRateFile = "HB.txt";
-const char *stepCoutFile = "steps.txt";
-const char *aclAndGyroFile = "AG.txt";
-const char *gpsFile = "gps.txt";
-
-const char *distanceFile = "DST.txt";
-const char *speedFile = "speed.txt";
-const char *AltitudeFile = "meters.txt";
-const char *dateFile = "date.txt";
 
 void sdCardSetup(int csPin)
 {
@@ -143,11 +135,84 @@ void  sdWriteAltitude(float alMeters)
   myFile.flush();
 }
 
-int sdReadLine(char *dataBuffer)
+void sdWriteMovingTime(int Lyear, int Lmonth, int Lday, int Lhour, int Lminute, int Lsecond,
+                  int Cyear, int Cmonth, int Cday, int Chour, int Cminute, int Csecond)
+{
+  int i;
+  char result[2] = {0};
+
+  //sprintf(result, "%04d", (int)alMeters);
+  myFile = SD.open(dateFile, FILE_WRITE);
+  myFile.seek(0);
+  
+  myFile.print(Lyear);
+  
+  sprintf(result, "%02d", (int)Lmonth);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+  
+  sprintf(result, "%02d", (int)Lday);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+
+  sprintf(result, "%02d", (int)Lhour);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+  
+  sprintf(result, "%02d", (int)Lminute);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+  
+  sprintf(result, "%02d", (int)Lsecond);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+
+  myFile.print(";");
+  
+  myFile.print(Cyear);
+  
+  sprintf(result, "%02d", (int)Cmonth);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+  
+  sprintf(result, "%02d", (int)Cday);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+
+  sprintf(result, "%02d", (int)Chour);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+  
+  sprintf(result, "%02d", (int)Cminute);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+  
+  sprintf(result, "%02d", (int)Csecond);
+    for (i = 0; i < 2; i++) {
+    myFile.print(result[i]);
+  }
+  
+  myFile.print("\r\n");
+
+  myFile.close();
+  myFile.flush(); 
+}
+
+int sdReadLine(const char *path,  char *dataBuffer)
 {
   char inputChar;
   int index = 0;
-  //myFile = SD.open(file, FILE_READ);
+  //Serial.print("start to read one line");
+  File fd = SD.open(path, FILE_READ);
   inputChar = myFile.read();
   Serial.print(inputChar);
   if (inputChar == EOF)
@@ -160,21 +225,24 @@ int sdReadLine(char *dataBuffer)
     if (inputChar == EOF)
       return 0;
   }
+
+  myFile.close();
   return index;
 }
 
 void sdReadheartRateFile(void)
 {
   char oneLine[12] = {0};
-  int ret;
-  myFile = SD.open(heartRateFile, FILE_READ);
-
-  while ((ret = sdReadLine(oneLine)) > 0) {
-    Serial.print(oneLine);
+  int ret, i;
+  
+  while ((ret = sdReadLine(heartRateFile, oneLine)) > 0) {
+    for (i = 0; i < 12; i++)
+    {
+        Serial.print(oneLine[i]);
+    }
+  
     memset(oneLine, 0, 12);
   }
-
-  myFile.close();
 }
 
 void SdFileRemove(const char *file)

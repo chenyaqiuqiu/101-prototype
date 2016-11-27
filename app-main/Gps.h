@@ -9,6 +9,7 @@ void gpsSetup(int gpsBaud);
 //int getGpshdopAndsateNum(int *satellitesNum, int *hdop);
 //int getGpslngAndlatValue(double *lat, double *lng, int *age);
 
+int updateGpslngAndlatValue(void);
 void getGpsDistance(int *distance);
 int getGpsSpeed(float *speed);
 int getGpsAltitude(float *altitudeMeters);

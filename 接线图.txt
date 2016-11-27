@@ -1,0 +1,25 @@
+#define RED_LED     9
+#define GREEN_LED   5
+#define BLUE_LED    6
+
+
+红灯  9
+绿灯  5
+蓝灯  6
+
+
+SD卡：  
+CS     2
+CLK    13
+MOSI   11
+MISO   12
+
+GPS：  
+
+GPS的RXD   3
+GPS的TXD   4
+
+BATVoltage  A1;
+按钮        A2;
+
+心率： 	    A0;

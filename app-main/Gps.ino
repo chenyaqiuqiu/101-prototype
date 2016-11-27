@@ -63,16 +63,16 @@ int getGpshdopAndsateNum(int *satellitesNum, int *hdop)
   return -1;
 }
 
-int getGpslngAndlatValue(double *lat, double *lng, int *age)
+//int getGpslngAndlatValue(double *lat, double *lng, int *age)
+int updateGpslngAndlatValue(void)
 {
   smartDelay(0);
   if (gps.location.isValid()) {
-    *lat =  gps.location.lat();
-    *lng = gps.location.lng();
-    lastLat = *lat;
-    lastLng = *lng;
 
-    *age = gps.location.age();
+    lastLat = gps.location.lat();
+    lastLng = gps.location.lng();
+
+    //*age = gps.location.age();
     return 0;
   }
   GpsDebug("Location is not valid\r\n");

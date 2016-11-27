@@ -7,6 +7,7 @@
 #include "ThreeColorLeds.h"
 #include "CurieTimerOne.h"
 #include "Gps.h"
+#include "BLE.h"
 
 #define APP_DEBUG 1
 
@@ -45,9 +46,6 @@ static const int sdCardCsPin = 2;
 int currentBATVoltage;
 int lastBATVoltage;
 
-//sendDataToAppFlag: temp defined for debug
-static bool sendDataToAppFlag = false;
-
 // Arduino101 运行状态
 static bool BATCharging = false;
 static bool DataSampling = false;
@@ -71,6 +69,8 @@ bool dataSampleLeds = true;
 int bleCounterIndex = 0;
 
 long stepsCounter;
+int distanceAvrSec;
+int distance;
 
 float aclX;
 float aclY;
@@ -79,12 +79,12 @@ float gX;
 float gY;
 float gZ;
 
-int year_lastMs;
-int month_lastMs;
-int day_lastMs;
-int hour_lastMs;
-int minute_lastMs;
-int second_lastMs;
+int lastYear;
+int lastMonth;
+int lastDay;
+int lastHour;
+int lastMinute;
+int lastSecond; 
 
 void sendDataToApp(void)
 {
@@ -115,33 +115,49 @@ static void calculateHeartRate(void)
   }
 }
 
-void getAndWriteGpsData(void)
+void saveGPSTimerInfo()
+{
+   int ret;
+   int curYear, curMonth, curDay, curHour, curMinute, curSecond;
+  Serial.print("save time\r\n");
+  while((ret = gpsScan()) == -1);;
+  getGpsTime(&curYear, &curMonth, &curDay, &curHour, &curMinute, &curSecond);
+
+  sdWriteMovingTime(lastYear, lastMonth, lastDay, lastHour, lastMinute, lastSecond,
+                  curYear, curMonth, curDay, curHour, curMinute, curSecond);
+}
+
+void updateStartTime()
+{
+   int ret;
+   int curYear, curMonth, curDay, curHour, curMinute, curSecond;
+
+  Serial.print("update start time\r\n");
+  while((ret = gpsScan()) == -1);;
+  getGpsTime(&curYear, &curMonth, &curDay, &curHour, &curMinute, &curSecond);
+  lastYear = curYear;
+  lastMonth = curMonth;
+  lastDay = curDay;
+  lastHour = curHour;
+  lastMinute = curMinute;
+  lastSecond = curSecond;
+}
+
+void saveGPSInfo(void)
 {
   int ret;
-  int distance;
   float gpsSpeed;
   float alMeters;
-  int cur_year, cur_month, cur_day, cur_hour, cur_minute, cur_second;
 
   Serial.print("try to get gps data\r\n");
   while((ret = gpsScan()) == -1);
   Serial.print("scan done\r\n");
-  getGpsDistance(&distance);
+  
   getGpsSpeed(&gpsSpeed);
   getGpsAltitude(&alMeters);
-  getGpsTime(&cur_year, &cur_month, &cur_day, &cur_hour, &cur_minute, &cur_second);
-
-  year_lastMs = cur_year;
-  month_lastMs = cur_month;
-  day_lastMs = cur_day;
-  hour_lastMs = cur_hour;
-  minute_lastMs = cur_minute;
-  second_lastMs = cur_second;
-
-  sdWriteDistance(distance);
+  
   sdWriteSpeed(gpsSpeed);
   sdWriteAltitude(alMeters);
-  //sdWriteDate();
 }
 
 static void updateBatteryStatus(int BATVoltage)
@@ -171,19 +187,25 @@ void setup() {
   accelerometerSetup();
   gyroSetup();
   ledsSetup();
+  BLEsetup();
   AppDebug("Initializing is Done.");
 }
 
+int temp;
 void loop() {
-  // update Battery Voltage every 0.1s
-  // get Battery Voltage by A1 Pin
-  //sdReadheartRateFile();
-  //while(1);
   
+    // for Debug
+    batteryPowerStatus =  full;
+    
   currentBATVoltage = analogRead(A1);
   updateBatteryStatus(currentBATVoltage);
+  lastBATVoltage = currentBATVoltage;
 
-  if (currentBATVoltage > lastBATVoltage) {
+    // for Debug
+    batteryPowerStatus =  full;
+    
+  // 防止AD采样精度不准 增加余量
+  if (currentBATVoltage > (lastBATVoltage - 100)) {
     BATCharging = true;
     if (chargingTimer == TIMER_0S) {
       Serial.print("show charging status\r\n");
@@ -202,20 +224,30 @@ void loop() {
     BATCharging = false;
     chargingTimer = TIMER_0S;
   }
-  lastBATVoltage = currentBATVoltage;
-
+ 
   // dataSample Button checking
   sampleButtonVoltage = analogRead(A2);
   if (sampleButtonVoltage > SAMPLE_BUTTON_PUSHED_VOLTAGE) {
     sampleButtonPushedTimer++;
     if (sampleButtonPushedTimer >= TIMER_1S) {
       if (dataSampleStart == true) {
+        // 在采样时如果按钮按下大于1s，采样结束,读取GPS的值作为结束时间，并保持到SD卡中
+        Serial.print("Stop Sample and Save Date\r\n");
+        saveGPSTimerInfo();
+        sdWriteDistance(distance);
         dataSampleStart = false;
         sampleButtonPushedTimer = 0;
       }
     }
 
     if (sampleButtonPushedTimer >= TIMER_1_5S) {
+      // 按钮按下大于1.5s数据采样采样开始
+      // 读取GPS时间值，作为运动起始时间
+      Serial.print("update start Time\r\n");
+      updateStartTime();
+      updateGpslngAndlatValue();
+      distance = 0;
+      
       dataSampleStart = true;
       sampleButtonPushedTimer = 0;
     }
@@ -224,8 +256,23 @@ void loop() {
   }
 
   // Debug Propose
-  dataSampleStart = true;
+  dataSampleStart = false;
+  /*
+  temp++;
 
+  if (temp == 3) {
+      updateStartTime();
+      updateGpslngAndlatValue();
+      distance = 0;     
+  }
+  
+  if (temp == 50) {
+        Serial.print("save GPS time info and distance");
+        temp = 0;
+        saveGPSTimerInfo();
+        sdWriteDistance(distance);      
+  }
+ */
   if (dataSampleStart == true) {
     DataSampling = true;
     heartRate[dataSampleTimer++] = analogRead(A0);
@@ -245,8 +292,12 @@ void loop() {
       getGyroValue(&gX, &gY, &gZ);
       getAccelrometerValue(&aclX, &aclY, &aclZ);
       sdWriteAclAndGyro(gX, gY, gZ, aclX, aclY, aclZ);
-      getAndWriteGpsData();
-
+      
+      getGpsDistance(&distanceAvrSec);
+      distance += distanceAvrSec;
+      
+      saveGPSInfo();
+      
       dataSampleTimer = 0;
       dataSampleLeds = !dataSampleLeds;
     }
@@ -263,12 +314,15 @@ void loop() {
   // open the below comments to debug BLE
   //sendDataToAppFlag = false;
   // BLE sending
-  if (sendDataToAppFlag) {
+  
+  if (BLEisConnectted() >= 0) {
     // BLE is connected and send data to App by BLE
+    Serial.print("Start sending BLE data");
     BLESending = true;
     CurieTimerOne.start(BLE_LEDS_INTERVAL_TIMERS, &timedBlinkIsr);  // set timer and callback
+    BLEupdate();
+    CurieTimerOne.kill();
   } else {
-    //CurieTimerOne.stop();
     BLESending = false;
   }
 
